@@ -2,12 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import string
-from sklearn.pipeline import Pipeline
 import nltk
 from itertools import chain
-from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
 from tqdm.auto import tqdm
 import re, string
