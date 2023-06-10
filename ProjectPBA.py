@@ -1,22 +1,23 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
 import pandas as pd
 import numpy as np
+import string
+from sklearn.pipeline import Pipeline
 import nltk
-import re, string
-import itertools
-from sklearn import preprocessing
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsClassifier
-from nltk.sentiment import SentimentIntensityAnalyzer
+from itertools import chain
 from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
-from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
-from itertools import chain
-from tqdm.auto import tqdm
+from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import confusion_matrix, accuracy_score, recall_score, precision_score, f1_score
+from tqdm.auto import tqdm
+import re, string
+import scipy.sparse as sp
+from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+
+st.title('Prediksi tweet covid 19')
+text = st.text_input("Masukkan teks").lower()
+button=st.button('Hasil Prediksi')
 
 # Download resources
 nltk.download('popular')
@@ -25,8 +26,7 @@ nltk.download('stopwords')
 # Load dataset
 df = pd.read_csv('https://github.com/davata1/Project-PBA/blob/main/covid.csv')
 df.drop_duplicates(inplace=True)
-df = df.drop(['Unnamed:','Datetime', 'Tweet Id'], axis=1)
-
+df = df.drop(['Unnamed:','Datetime', 'Tweet Id'], axis=1)  
 # Text Cleaning
 def cleaning(text):
     # HTML Tag Removal
@@ -52,67 +52,48 @@ def cleaning(text):
     # Mengubah text 'nan' dengan whitespace agar nantinya dapat dihapus
     text = re.sub('nan', '', text)
 
-    return 
+    return text
 
 def preprocess_data(df):
-    # Preprocess text
-    df['Username'] = df['Username'].apply(lambda x: cleaning(x)) 
-    df['Text'] = df['Text'].apply(lambda x: cleaning(x))
-    
-    # Tokenizing text
-    df['Text_token'] = df['Text'].apply(lambda x: word_tokenize(x))
-    
-    # Removing stopwords
+    #Removing stopwords
     stop_words = set(chain(stopwords.words('indonesian'), stopwords.words('english')))
     df['Text_token'] = df['Text_token'].apply(lambda x: [w for w in x if not w in stop_words])
 
-    # Stemming text
+# Tokenizing text
+    df['Text_token'] = df['Text'].apply(lambda x: word_tokenize(x))
+
+# Stemming text
     tqdm.pandas()
     factory = StemmerFactory()
     stemmer = factory.create_stemmer()
-    df['Text_token'] = df['Text_token'].progress_apply(lambda x: stemmer.stem(' '.join(x)).split(' '))
+    df['Text_token'] = df['Text_token'].progress_apply(lambda x: stemmer.stem(' '.join(x)).split(' '))           
 
-    return df
+# Mengambil input teks dari pengguna
+#st.write("Hasil Preprocessing:")
+analisis=cleaning(text)
+#st.write(analisis)
+        
+import pickle
+with open ('modelKNNrill.pkl', 'rb') as r:
+    knn=pickle.load(r)
+    import pickle
+    with open('tfidf.pkl', 'rb') as f:
+        tfidf= pickle.load(f)
+        
+        hasil=tfidf.transform([analisis])
+        predictions = knn.predict(hasil)
+        for a in predictions:
+            st.write('Text : ',analisis)
+            st.write('Sentimen :', a)
 
+    def process(df):
+        return preprocess_data(df)
+        
+st.title('ANALISIS SENTIMEN')
+text = st.text_input("Masukkan teks").lower()
+button=st.button('START ANALISIS')
 
-# Sentiment Analysis
-sia = SentimentIntensityAnalyzer()
-
-def label_text():
-    score = sia.polarity_scores()
-    if score['compound'] >= 0.05:
-        return 1  # tweet bernilai positif
-    else:
-        return 0  # tweet bernilai negatif
-    
-    # Preprocess data
-@st.cache_data()
-def preprocess_data_cached(df):
-    return preprocess_data(df)
-
-# Streamlit App
-st.title("Analisis Sentimen dan Pemodelan")
-st.header("Analisis Dataset")
-st.dataframe(df)
-
-st.header("Preprocessing dan Tokenisasi")
 if st.button("Preprocessing Data"):
-    processed_data = preprocess_data_cached(df)
+    processed_data = process(df)
     st.success("Preprocessing data selesai.")
     st.dataframe(processed_data)
-
-st.header("Analisis Sentimen")
-sentiment_text = st.text_input("Masukkan teks untuk analisis sentimen:")
-if sentiment_text:
-    sentiment_prediction = label_text(sentiment_text)
-    sentiment_label = "Positif" if sentiment_prediction == 1 else "Negatif" if sentiment_prediction == 2 else "Netral"
-    st.success(f"Sentimen: {sentiment_label}")
-
-st.header("Performa Model")
-accuracy = 0.0
-precision = 0.0
-recall = 0.0
-
-
-
-
