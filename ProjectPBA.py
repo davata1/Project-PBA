@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_option_menu import option_menu
 import pandas as pd
 import numpy as np
 import string
@@ -12,7 +11,6 @@ from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
 from tqdm.auto import tqdm
 import re, string
-import scipy.sparse as sp
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 
 st.title('Prediksi tweet covid 19')
